@@ -7,8 +7,79 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+    <style>
+      #progress-bar {
+        position: absolute;
+        top: 20px; /* Abstand vom oberen Rand */
+        left: 50%; /* Zentrieren */
+        transform: translateX(-50%);
+        z-index: 10; /* Überlagert den Rest */
+        width: 70%; /* Breite des Balkens */
+      }
+
+      .progress-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between; /* Gleichmäßiger Abstand */
+      }
+
+      .progress-step {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #aaa; /* Inaktiver Kreis */
+        border-radius: 50%;
+        font-size: 16px;
+        color: white;
+        font-weight: bold;
+        position: relative;
+      }
+
+      .progress-step img {
+        width: 80%; /* Bildgröße relativ zum Kreis */
+        height: 80%;
+        object-fit: contain; /* Bild passend skalieren */
+      }
+
+      .progress-step.active {
+        background-color: #ffffed; /* Aktiver Kreis */
+      }
+
+      .progress-line {
+        flex-grow: 1; /* Linie füllt den verfügbaren Platz */
+        height: 4px; /* Höhe der Linie */
+        background-color: #ddd; /* Inaktive Linie */
+        margin: 0 10px; /* Abstand zwischen den Kreisen */
+      }
+
+      .progress-line.active {
+        background-color: #ffffed; /* Aktive Linie */
+      }
+    </style>
   </head>
   <body>
+    <div id="progress-bar">
+      <div class="progress-container">
+        <div class="progress-step active">
+          <img src="/images/icon1.png" alt="Pose 1" />
+        </div>
+        <div class="progress-line"></div>
+        <div class="progress-step">
+          <img src="/images/icon3.png" alt="Pose 2" />
+        </div>
+        <div class="progress-line"></div>
+        <div class="progress-step">
+          <img src="/images/icon2.png" alt="Pose 3" />
+        </div>
+        <div class="progress-line"></div>
+        <div class="progress-step">
+          <img src="/images/icon1.png" alt="Pose 4" />
+        </div>
+      </div>
+    </div>
+
     <video id="video" style="display: none"></video>
     <canvas id="canvas"></canvas>
     <script src="script.js"></script>

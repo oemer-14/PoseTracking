@@ -11,56 +11,50 @@ const camera = new THREE.PerspectiveCamera(
 );
 const renderer = new THREE.WebGLRenderer({ canvas: canvasElement });
 renderer.setSize(window.innerWidth, window.innerHeight);
-camera.position.z = 5;
+
+// Kamera-Position erhöhen und weiter nach hinten setzen
+camera.position.set(0, 2, 8);
 
 // Maskottchen erstellen
-const mascot = new THREE.Group(); // Hauptgruppe für das Maskottchen
+const mascot = new THREE.Group();
 
-// Körper
-const bodyGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1.5, 32);
+// Körper (kleiner gemacht)
+const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1.0, 32); // Kleinere Breite und Höhe
 const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
 mascot.add(body);
 
 // Kopf
-const headGeometry = new THREE.SphereGeometry(0.4, 32, 32);
+const headGeometry = new THREE.SphereGeometry(0.3, 32, 32); // Kopf etwas kleiner
 const headMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
 const head = new THREE.Mesh(headGeometry, headMaterial);
+head.position.y = 1.5; // Kopf über dem Körper platzieren
 mascot.add(head);
 
 // Funktion, um Gelenke hinzuzufügen
-function createJoint(color) {
-  const geometry = new THREE.SphereGeometry(0.2, 16, 16);
+function createJoint(color, size = 0.1) {
+  const geometry = new THREE.SphereGeometry(size, 16, 16);
   const material = new THREE.MeshBasicMaterial({ color });
   return new THREE.Mesh(geometry, material);
 }
 
 // Gelenke erstellen
-const leftShoulder = createJoint(0xff0000);
-const rightShoulder = createJoint(0x0000ff);
-const leftElbow = createJoint(0xff8800);
-const rightElbow = createJoint(0x0088ff);
-const leftHand = createJoint(0xffff00);
-const rightHand = createJoint(0x88ff00);
-const hip = createJoint(0x00ffff); // Hüfte
-const leftKnee = createJoint(0xff00ff);
-const rightKnee = createJoint(0x8800ff);
-const leftFoot = createJoint(0xffffff);
-const rightFoot = createJoint(0x888888);
+const joints = {
+  leftShoulder: createJoint(0xff0000, 0.08),
+  rightShoulder: createJoint(0x0000ff, 0.08),
+  leftElbow: createJoint(0xff8800, 0.08),
+  rightElbow: createJoint(0x0088ff, 0.08),
+  leftHand: createJoint(0xffff00, 0.08),
+  rightHand: createJoint(0x88ff00, 0.08),
+  hip: createJoint(0x00ffff, 0.08),
+  leftKnee: createJoint(0xff00ff, 0.08),
+  rightKnee: createJoint(0x8800ff, 0.08),
+  leftFoot: createJoint(0xffffff, 0.08),
+  rightFoot: createJoint(0x888888, 0.08),
+};
 
-mascot.add(
-  leftShoulder,
-  rightShoulder,
-  leftElbow,
-  rightElbow,
-  leftHand,
-  rightHand,
-  hip,
-  leftKnee,
-  rightKnee,
-  leftFoot,
-  rightFoot
-);
+Object.values(joints).forEach((joint) => mascot.add(joint));
+scene.add(mascot);
 
 // Linien für alle Verbindungen
 function createLimbLine() {
@@ -72,22 +66,16 @@ function createLimbLine() {
   return new THREE.Line(geometry, material);
 }
 
-const headToBodyLine = createLimbLine(); // Verbindung vom Kopf zum Körper
-const leftArmLine = createLimbLine();
-const rightArmLine = createLimbLine();
-const leftLegLine = createLimbLine();
-const rightLegLine = createLimbLine();
-const bodyLine = createLimbLine();
+const lines = {
+  headToBody: createLimbLine(),
+  leftArm: createLimbLine(),
+  rightArm: createLimbLine(),
+  leftLeg: createLimbLine(),
+  rightLeg: createLimbLine(),
+  bodyLine: createLimbLine(),
+};
 
-scene.add(
-  headToBodyLine,
-  leftArmLine,
-  rightArmLine,
-  leftLegLine,
-  rightLegLine,
-  bodyLine
-);
-scene.add(mascot);
+Object.values(lines).forEach((line) => scene.add(line));
 
 // Three.js Animation
 function animate() {
@@ -109,153 +97,95 @@ pose.setOptions({
 
 pose.onResults((results) => {
   if (results.poseLandmarks) {
-    console.log("Pose-Daten erkannt:", results.poseLandmarks);
+    const flipX = (x) => -x + 1; // Spiegelung der Figur
 
-    // Kopf bewegen (Landmark 0)
-    const nose = results.poseLandmarks[0];
-    if (nose) {
-      head.position.set(nose.x * 5 - 2.5, -nose.y * 5 + 3.0, 0);
-    }
+    const updateJoint = (joint, data) => {
+      joint.position.set(flipX(data.x) * 5 - 2.5, -data.y * 5 + 2.5, 0);
+    };
 
-    // Hüfte bewegen (Mittelpunkt von Hüft-Landmarks 23 und 24)
+    const {
+      leftShoulder,
+      rightShoulder,
+      leftElbow,
+      rightElbow,
+      leftHand,
+      rightHand,
+      hip,
+      leftKnee,
+      rightKnee,
+      leftFoot,
+      rightFoot,
+    } = joints;
+
+    // Gelenke aktualisieren
+    updateJoint(joints.leftShoulder, results.poseLandmarks[11]);
+    updateJoint(joints.rightShoulder, results.poseLandmarks[12]);
+    updateJoint(joints.leftElbow, results.poseLandmarks[13]);
+    updateJoint(joints.rightElbow, results.poseLandmarks[14]);
+    updateJoint(joints.leftHand, results.poseLandmarks[15]);
+    updateJoint(joints.rightHand, results.poseLandmarks[16]);
+    updateJoint(joints.hip, results.poseLandmarks[23]);
+    updateJoint(joints.leftKnee, results.poseLandmarks[25]);
+    updateJoint(joints.rightKnee, results.poseLandmarks[26]);
+    updateJoint(joints.leftFoot, results.poseLandmarks[27]);
+    updateJoint(joints.rightFoot, results.poseLandmarks[28]);
+
+    // Dynamische Körperposition (Mittelpunkte von Schultern und Hüfte)
+    const leftShoulderData = results.poseLandmarks[11];
+    const rightShoulderData = results.poseLandmarks[12];
     const leftHipData = results.poseLandmarks[23];
     const rightHipData = results.poseLandmarks[24];
-    if (leftHipData && rightHipData) {
-      const hipX = (leftHipData.x + rightHipData.x) / 2;
-      const hipY = (leftHipData.y + rightHipData.y) / 2;
-      hip.position.set(hipX * 5 - 2.5, -hipY * 5 + 2.5, 0);
 
-      // Oberkörper verbinden (Hüfte mit Schultern)
-      const leftShoulderData = results.poseLandmarks[11];
-      const rightShoulderData = results.poseLandmarks[12];
-      if (leftShoulderData && rightShoulderData) {
-        const bodyCenterX =
-          (leftShoulderData.x + rightShoulderData.x + hipX) / 3;
-        const bodyCenterY =
-          (leftShoulderData.y + rightShoulderData.y + hipY) / 3;
+    if (leftShoulderData && rightShoulderData && leftHipData && rightHipData) {
+      const centerX =
+        (leftShoulderData.x +
+          rightShoulderData.x +
+          leftHipData.x +
+          rightHipData.x) /
+        4;
+      const centerY =
+        (leftShoulderData.y +
+          rightShoulderData.y +
+          leftHipData.y +
+          rightHipData.y) /
+        4;
 
-        body.position.set(bodyCenterX * 5 - 2.5, -bodyCenterY * 5 + 2.5, 0);
-
-        bodyLine.geometry.setFromPoints([
-          leftShoulder.position,
-          hip.position,
-          rightShoulder.position,
-        ]);
-
-        leftShoulder.position.set(
-          leftShoulderData.x * 5 - 2.5,
-          -leftShoulderData.y * 5 + 2.5,
-          0
-        );
-        rightShoulder.position.set(
-          rightShoulderData.x * 5 - 2.5,
-          -rightShoulderData.y * 5 + 2.5,
-          0
-        );
-      }
+      body.position.set(flipX(centerX) * 5 - 2.5, -centerY * 5 + 2.5, 0);
     }
 
-    // Linie vom Kopf zum Körper
+    // Kopf positionieren
+    const nose = results.poseLandmarks[0];
     if (nose) {
-      headToBodyLine.geometry.setFromPoints([
-        head.position,
-        body.position, // Verbindung zum grünen Körper (Oberkörper)
-      ]);
-    }
-
-    // Arme bewegen
-    const leftElbowData = results.poseLandmarks[13];
-    const rightElbowData = results.poseLandmarks[14];
-    const leftHandData = results.poseLandmarks[15];
-    const rightHandData = results.poseLandmarks[16];
-
-    if (leftElbowData) {
-      leftElbow.position.set(
-        leftElbowData.x * 5 - 2.5,
-        -leftElbowData.y * 5 + 2.5,
-        0
-      );
-    }
-    if (rightElbowData) {
-      rightElbow.position.set(
-        rightElbowData.x * 5 - 2.5,
-        -rightElbowData.y * 5 + 2.5,
-        0
-      );
-    }
-    if (leftHandData) {
-      leftHand.position.set(
-        leftHandData.x * 5 - 2.5,
-        -leftHandData.y * 5 + 2.5,
-        0
-      );
-    }
-    if (rightHandData) {
-      rightHand.position.set(
-        rightHandData.x * 5 - 2.5,
-        -rightHandData.y * 5 + 2.5,
-        0
-      );
-    }
-
-    // Beine bewegen
-    const leftKneeData = results.poseLandmarks[25];
-    const rightKneeData = results.poseLandmarks[26];
-    const leftFootData = results.poseLandmarks[27];
-    const rightFootData = results.poseLandmarks[28];
-
-    if (leftKneeData) {
-      leftKnee.position.set(
-        leftKneeData.x * 5 - 2.5,
-        -leftKneeData.y * 5 + 2.5,
-        0
-      );
-    }
-    if (rightKneeData) {
-      rightKnee.position.set(
-        rightKneeData.x * 5 - 2.5,
-        -rightKneeData.y * 5 + 2.5,
-        0
-      );
-    }
-    if (leftFootData) {
-      leftFoot.position.set(
-        leftFootData.x * 5 - 2.5,
-        -leftFootData.y * 5 + 2.5,
-        0
-      );
-    }
-    if (rightFootData) {
-      rightFoot.position.set(
-        rightFootData.x * 5 - 2.5,
-        -rightFootData.y * 5 + 2.5,
-        0
-      );
+      head.position.set(flipX(nose.x) * 5 - 2.5, -nose.y * 5 + 3.0, 0);
     }
 
     // Linien aktualisieren
-    leftArmLine.geometry.setFromPoints([
-      leftShoulder.position,
-      leftElbow.position,
-      leftHand.position,
+    lines.headToBody.geometry.setFromPoints([head.position, body.position]);
+    lines.leftArm.geometry.setFromPoints([
+      joints.leftShoulder.position,
+      joints.leftElbow.position,
+      joints.leftHand.position,
     ]);
-    rightArmLine.geometry.setFromPoints([
-      rightShoulder.position,
-      rightElbow.position,
-      rightHand.position,
+    lines.rightArm.geometry.setFromPoints([
+      joints.rightShoulder.position,
+      joints.rightElbow.position,
+      joints.rightHand.position,
     ]);
-    leftLegLine.geometry.setFromPoints([
-      hip.position,
-      leftKnee.position,
-      leftFoot.position,
+    lines.leftLeg.geometry.setFromPoints([
+      joints.hip.position,
+      joints.leftKnee.position,
+      joints.leftFoot.position,
     ]);
-    rightLegLine.geometry.setFromPoints([
-      hip.position,
-      rightKnee.position,
-      rightFoot.position,
+    lines.rightLeg.geometry.setFromPoints([
+      joints.hip.position,
+      joints.rightKnee.position,
+      joints.rightFoot.position,
     ]);
-  } else {
-    console.log("Keine Pose-Daten erkannt");
+    lines.bodyLine.geometry.setFromPoints([
+      joints.leftShoulder.position,
+      joints.hip.position,
+      joints.rightShoulder.position,
+    ]);
   }
 });
 
@@ -273,12 +203,46 @@ async function startCamera() {
   }
 }
 
-// MediaPipe Kamera initialisieren
+// Fortschrittsanzeige-Logik
+// Fortschrittsanzeige-Logik
+const progressSteps = document.querySelectorAll(".progress-step");
+const progressLines = document.querySelectorAll(".progress-line");
+
+let currentStep = 1; // Startet bei Schritt 1
+
+// Fortschrittsanzeige aktualisieren
+function updateProgressBar(step) {
+  progressSteps.forEach((progressStep, index) => {
+    if (index < step) {
+      progressStep.classList.add("active");
+    } else {
+      progressStep.classList.remove("active");
+    }
+  });
+
+  progressLines.forEach((progressLine, index) => {
+    if (index < step - 1) {
+      progressLine.classList.add("active");
+    } else {
+      progressLine.classList.remove("active");
+    }
+  });
+}
+
+// Bewegungssimulation für die Fortschrittsanzeige (dynamisch durch Bewegung erweiterbar)
+function simulateMotion() {
+  currentStep = (currentStep % 4) + 1; // Zyklisch von 1 bis 4
+  updateProgressBar(currentStep);
+}
+
+// Starte die Fortschrittsanzeige
+setInterval(simulateMotion, 2000); // Fortschritt alle 2 Sekunden
+
+// Starte Kamera und MediaPipe
 startCamera().then(() => {
   console.log("Starte MediaPipe Kamera...");
   const cameraFeed = new Camera(videoElement, {
     onFrame: async () => {
-      console.log("Frame an MediaPipe gesendet");
       await pose.send({ image: videoElement });
     },
     width: 640,
